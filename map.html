@@ -21,6 +21,128 @@
         .amap-icon img {
             border-radius: 50%;
         }
+        /* 小人样式 */
+        .character {
+            width: 30px;
+            height: 30px;
+            background-color: #ff5722;
+            border-radius: 50%;
+            position: relative;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        .character:after {
+            content: "";
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #fff;
+            border-radius: 50%;
+            top: 8px;
+            left: 6px;
+        }
+        /* 进入按钮样式 */
+        .enter-btn {
+            position: absolute;
+            bottom: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            display: none;
+            z-index: 1001;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .enter-btn:hover {
+            background-color: #45a049;
+            transform: translateX(-50%) scale(1.05);
+        }
+        /* 地点信息弹窗 - 优化后的样式 */
+        .location-info {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 1002;
+            max-width: 600px;
+            width: 90%;
+            display: none;
+            border: 1px solid #e0e0e0;
+            animation: fadeIn 0.3s ease-out;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -40%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+        .location-info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .location-info-title {
+            color: #2c3e50;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+        }
+        .close-btn {
+            color: #7f8c8d;
+            font-size: 24px;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        .close-btn:hover {
+            color: #e74c3c;
+        }
+        .location-info-content {
+            color: #34495e;
+            line-height: 1.6;
+            font-size: 16px;
+            white-space: pre-wrap;
+        }
+        .location-info-footer {
+            margin-top: 20px;
+            text-align: right;
+            font-size: 14px;
+            color: #95a5a6;
+        }
+        /* 遮罩层 */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1001;
+            display: none;
+        }
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .location-info {
+                padding: 20px;
+                max-width: 90%;
+            }
+            .location-info-title {
+                font-size: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -29,6 +151,25 @@
 
     <!-- 地图容器 -->
     <div id="map"></div>
+
+    <!-- 小人元素 -->
+    <div id="character" class="character" style="display: none;"></div>
+    <button id="enterBtn" class="enter-btn">进入地点</button>
+
+    <!-- 遮罩层 -->
+    <div id="overlay" class="overlay"></div>
+
+    <!-- 地点信息弹窗 -->
+    <div id="locationInfo" class="location-info">
+        <div class="location-info-header">
+            <h3 id="infoTitle" class="location-info-title"></h3>
+            <span class="close-btn" onclick="closeLocationInfo()">×</span>
+        </div>
+        <div id="infoContent" class="location-info-content"></div>
+        <div class="location-info-footer">
+            杭州电子科技大学校园地图系统
+        </div>
+    </div>
 
     <!-- 添加地点表单 -->
     <div class="form-container mb-4">
@@ -54,6 +195,9 @@
                 <button type="button" class="btn btn-success" onclick="locateCampus()">
                     回到校园中心
                 </button>
+                <button type="button" class="btn btn-info" onclick="initCharacter()">
+                    生成小人
+                </button>
             </div>
         </form>
     </div>
@@ -67,6 +211,12 @@
 <script>
     // 杭电中心坐标（高德坐标系）
     const campusCenter = [30.314812, 120.343287];
+
+    // 全局变量
+    let characterPosition = null;
+    let characterMarker = null;
+    let currentNearbyLocation = null;
+    const detectionRadius = 0.0002; // 检测半径
 
     // 初始化高德地图
     const map = L.map('map', {
@@ -92,7 +242,7 @@
             coords: [30.311417, 120.343617],
             description: "杭州电子科技大学计算机学院（软件学院） [2]，杭州电子科技大学二级学院。\n" +
                 "计算机学院是在1980年设立的本科计算机专业的基础上发展起来的。1980年9月开始面向全国招收了第一批计算机应用专业本科生，1981年开始招收计算机应用技术硕士研究生。\n" +
-                "学院拥有计算机科学与技术（1980年）、软件工程（2003年）二个本科专业，其中“计算机科学与技术”是国家特色建设专业、国家管理专业、国家工程教育认证专业、教育部“本科教学工程”地方高校第一批综合改革试点专业、浙江省本科院校“十二五”优势专业、浙江省本科院校“十三五”优势专业建设项目。"
+                "学院拥有计算机科学与技术（1980年）、软件工程（2003年）二个本科专业，其中计算机科学与技术是国家特色建设专业、国家管理专业、国家工程教育认证专业、教育部本科教学工程地方高校第一批综合改革试点专业、浙江省本科院校十二五优势专业、浙江省本科院校十三五优势专业建设项目。"
         },
         {
             name: "学生活动中心",
@@ -111,7 +261,7 @@
         {
             name: "体育馆",
             coords: [30.314921, 120.340039],
-            description: "这个外形有点像“UFO”的，是杭州第二大的体育馆，位于杭电西侧，会作为今年的亚运会比赛场馆之一。很多大型活动在这里展开：开学典礼、毕业典礼、篮球比赛等等。体育馆旁边有一个副馆，内设有舞蹈室、羽毛球场。"
+            description: "这个外形有点像UFO的，是杭州第二大的体育馆，位于杭电西侧，会作为今年的亚运会比赛场馆之一。很多大型活动在这里展开：开学典礼、毕业典礼、篮球比赛等等。体育馆旁边有一个副馆，内设有舞蹈室、羽毛球场。"
         }
     ];
 
@@ -162,6 +312,139 @@
     function locateCampus() {
         map.flyTo(campusCenter, 17);
     }
+
+    // 初始化小人
+    function initCharacter() {
+        if (characterMarker) {
+            map.removeLayer(characterMarker);
+        }
+
+        // 在校园中心位置创建小人
+        characterPosition = campusCenter;
+        characterMarker = L.marker(characterPosition, {
+            icon: L.divIcon({
+                className: 'character-icon',
+                html: '<div class="character"></div>',
+                iconSize: [30, 30]
+            }),
+            zIndexOffset: 1000
+        }).addTo(map);
+
+        // 显示小人
+        document.getElementById('character').style.display = 'block';
+
+        // 聚焦到小人位置
+        map.flyTo(characterPosition, 17);
+
+        // 添加键盘事件监听
+        document.addEventListener('keydown', handleKeyDown);
+    }
+
+    // 键盘控制小人移动
+    function handleKeyDown(e) {
+        if (!characterMarker) return;
+
+        const moveStep = 0.0001; // 移动步长
+        let newLat = characterPosition[0];
+        let newLng = characterPosition[1];
+
+        switch(e.key) {
+            case 'ArrowUp':
+                newLat += moveStep;
+                break;
+            case 'ArrowDown':
+                newLat -= moveStep;
+                break;
+            case 'ArrowLeft':
+                newLng -= moveStep;
+                break;
+            case 'ArrowRight':
+                newLng += moveStep;
+                break;
+            default:
+                return; // 忽略其他按键
+        }
+
+        // 更新小人位置
+        characterPosition = [newLat, newLng];
+        characterMarker.setLatLng(characterPosition);
+
+        // 检测是否接近地点
+        checkNearbyLocations();
+
+        // 稍微移动地图视角跟随小人
+        map.panTo(characterPosition, {
+            animate: true,
+            duration: 0.2
+        });
+    }
+
+    // 检测小人是否接近地点
+    function checkNearbyLocations() {
+        const enterBtn = document.getElementById('enterBtn');
+        enterBtn.style.display = 'none';
+        currentNearbyLocation = null;
+
+        // 检查所有预设地点
+        for (const location of presetLocations) {
+            const distance = getDistance(characterPosition, location.coords);
+
+            if (distance < detectionRadius) {
+                currentNearbyLocation = location;
+                enterBtn.style.display = 'block';
+                enterBtn.textContent = `进入${location.name}`;
+
+                // 将按钮定位到小人附近
+                const pixelPos = map.latLngToContainerPoint(characterPosition);
+                enterBtn.style.left = `${pixelPos.x}px`;
+                enterBtn.style.top = `${pixelPos.y + 20}px`;
+                break;
+            }
+        }
+    }
+
+    // 计算两点之间的距离
+    function getDistance(pos1, pos2) {
+        const latDiff = pos1[0] - pos2[0];
+        const lngDiff = pos1[1] - pos2[1];
+        return Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+    }
+
+    // 进入地点
+    document.getElementById('enterBtn').addEventListener('click', function() {
+        if (currentNearbyLocation) {
+            showLocationInfo(currentNearbyLocation);
+        }
+    });
+
+    // 显示地点信息
+    function showLocationInfo(location) {
+        document.getElementById('infoTitle').textContent = location.name;
+        document.getElementById('infoContent').textContent = location.description;
+        document.getElementById('locationInfo').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+
+        // 禁用地图交互
+        map.dragging.disable();
+        map.touchZoom.disable();
+        map.doubleClickZoom.disable();
+        map.scrollWheelZoom.disable();
+    }
+
+    // 关闭地点信息
+    function closeLocationInfo() {
+        document.getElementById('locationInfo').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+
+        // 恢复地图交互
+        map.dragging.enable();
+        map.touchZoom.enable();
+        map.doubleClickZoom.enable();
+        map.scrollWheelZoom.enable();
+    }
+
+    // 点击遮罩层也可以关闭弹窗
+    document.getElementById('overlay').addEventListener('click', closeLocationInfo);
 </script>
 </body>
 </html>
