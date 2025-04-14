@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>杭电校园地图</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        #map {
+            height: 600px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+        .form-container {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        }
+        .amap-icon img {
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 class="text-center my-4">杭州电子科技大学校园地图</h1>
+
+    <!-- 地图容器 -->
+    <div id="map"></div>
+
+    <!-- 添加地点表单 -->
+    <div class="form-container mb-4">
+        <h4>地点管理</h4>
+        <form id="addForm" class="row g-3">
+            <div class="col-md-3">
+                <input type="text" class="form-control" id="name" placeholder="地点名称" required>
+            </div>
+            <div class="col-md-3">
+                <input type="number" step="any" class="form-control" id="lat"
+                       placeholder="纬度" value="30.297046" required>
+            </div>
+            <div class="col-md-3">
+                <input type="number" step="any" class="form-control" id="lng"
+                       placeholder="经度" value="120.344407" required>
+            </div>
+            <div class="col-md-12">
+                    <textarea class="form-control" id="description" rows="2"
+                              placeholder="地点描述"></textarea>
+            </div>
+            <div class="col-md-6">
+                <button type="submit" class="btn btn-primary">添加地点</button>
+                <button type="button" class="btn btn-success" onclick="locateCampus()">
+                    回到校园中心
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 高德地图API -->
+<script src="https://webapi.amap.com/maps?v=2.0&key=${MAP_CONFIG.apiKey}"></script>
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // 杭电中心坐标（高德坐标系）
+    const campusCenter = [30.314812, 120.343287];
+
+    // 初始化高德地图
+    const map = L.map('map', {
+        center: campusCenter,
+        zoom: 17
+    });
+
+    // 添加高德矢量图层
+    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+        subdomains: ['1', '2', '3', '4'],
+        attribution: '高德地图'
+    }).addTo(map);
+
+    // 预设校园地点
+    const presetLocations = [
+        {
+            name: "图书馆",
+            coords: [30.315108, 120.343309],
+            description: "杭州电子科技大学图书馆，是浙江省杭州电子科技大学的直属服务单位。杭州电子科技大学下沙校区图书馆总建筑面积2.8万平方米，于2003年落成启用。截至2022年12月，图书馆拥有藏书504.13万册，其中纸质图书230.82万册，电子图书273.31万册，长期订阅的中外文报刊977种，引进了几十种中外文数字资源。"
+        },
+        {
+            name: "软件学院",
+            coords: [30.311417, 120.343617],
+            description: "杭州电子科技大学计算机学院（软件学院） [2]，杭州电子科技大学二级学院。\n" +
+                "计算机学院是在1980年设立的本科计算机专业的基础上发展起来的。1980年9月开始面向全国招收了第一批计算机应用专业本科生，1981年开始招收计算机应用技术硕士研究生。\n" +
+                "学院拥有计算机科学与技术（1980年）、软件工程（2003年）二个本科专业，其中“计算机科学与技术”是国家特色建设专业、国家管理专业、国家工程教育认证专业、教育部“本科教学工程”地方高校第一批综合改革试点专业、浙江省本科院校“十二五”优势专业、浙江省本科院校“十三五”优势专业建设项目。"
+        },
+        {
+            name: "学生活动中心",
+            coords: [30.315239, 120.345634],
+            description: "学生活动中心，顾名思义是学生开展各项活动的地方啦～在这里，你可以参加丰富的学生活动，轮滑、街舞、乐队……只有你想不到的，没有学活不能给你的！"
+        },
+        {
+            name: "问鼎广场",
+            coords: [30.313055, 120.343315],
+            description: "问鼎广场，是杭州电子科技大学的标志性建筑，位于校图书馆正面。第497期《杭州电子科技大学报》曾刊登《问鼎赋》，对问鼎广场做出详细介绍。\n《问鼎赋》全文（作者：章村）\n" +
+                "问鼎雕塑，拔地而起在校园中央，超凡绝俗，离尘别嚣，与书声、鸟声、长风振林之声相呼应；擎天石柱，戛戛独造于校庆之年，栉风沐雨，迎来送往，共晨曦、夕照、星月璀璨之光齐辉映。\n" +
+                "三柱鼎立，相依相契，三柱环抱，各有指代。一柱喻示古远，思接滥觞，薪火传承；一柱标明现代，铅火嬗变，光电交汇；一柱直指未来，球旋地转，日新月异。仰脸环顾，如对高人，似临大士，又如见自我踌躇满志之真身；低首冥想，心湖寥阔，层云荡胸，更陡增来日登攀拼搏之信心。\n" +
+                "下沙多才俊，当今师生谈电子论量子，与万世圣贤尊孔子崇庄子同样百家争鸣；钱塘文人薮，目下同侪建学科攻课题，与千古英豪打天下坐江山一般势成鼎足。\n" +
+                "昔有楚子问鼎，觊觎周朝天下之小算盘难掩难言；今有才子问鼎，励志蟾宫折桂之大雄心可钦可佩。天道幽微，问鼎仰赖胆魄，目接任重道远大前程；天道酬勤，问鼎凭仗实力，心系科教兴国高功业。问鼎平添底气，问鼎激昂心志；问鼎兼容并蓄，问鼎多元同存。壮哉，问鼎以勇以力；伟哉，问鼎巍巍永立。"
+        },
+        {
+            name: "体育馆",
+            coords: [30.314921, 120.340039],
+            description: "这个外形有点像“UFO”的，是杭州第二大的体育馆，位于杭电西侧，会作为今年的亚运会比赛场馆之一。很多大型活动在这里展开：开学典礼、毕业典礼、篮球比赛等等。体育馆旁边有一个副馆，内设有舞蹈室、羽毛球场。"
+        }
+    ];
+
+    // 创建标记
+    function createMarker(location) {
+        const marker = L.marker(location.coords, {
+            title: location.name,
+            riseOnHover: true
+        }).addTo(map);
+
+        marker.bindPopup(`
+                <div class="popup-content">
+                    <h5 class="text-primary">${location.name}</h5>
+                    <p style="white-space: pre-wrap">${location.description}</p>
+                    <small class="text-muted">坐标：${location.coords[0].toFixed(6)}, ${location.coords[1].toFixed(6)}</small>
+                </div>
+            `);
+    }
+
+    // 初始化预设地点
+    presetLocations.forEach(createMarker);
+
+    // 表单提交处理
+    document.getElementById('addForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const newLocation = {
+            name: document.getElementById('name').value,
+            coords: [
+                parseFloat(document.getElementById('lat').value),
+                parseFloat(document.getElementById('lng').value)
+            ],
+            description: document.getElementById('description').value
+        };
+
+        createMarker(newLocation);
+        this.reset();
+        map.flyTo(newLocation.coords, 17);
+    });
+
+    // 地图点击事件
+    map.on('click', function(e) {
+        document.getElementById('lat').value = e.latlng.lat.toFixed(6);
+        document.getElementById('lng').value = e.latlng.lng.toFixed(6);
+    });
+
+    // 返回校园中心
+    function locateCampus() {
+        map.flyTo(campusCenter, 17);
+    }
+</script>
+</body>
+</html>
