@@ -7,64 +7,174 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        /* 主色调定义 */
+        :root {
+            --hdu-blue: #0056b3;
+            --hdu-light-blue: #e6f0ff;
+            --hdu-orange: #ff6b35;
+            --hdu-green: #4caf50;
+            --hdu-dark: #2c3e50;
+            --hdu-light: #f8f9fa;
+        }
+
+        /* 基础样式重置 */
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* 标题样式优化 */
+        h1 {
+            color: var(--hdu-blue);
+            font-weight: 700;
+            margin: 1.5rem 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+            padding-bottom: 15px;
+        }
+
+        h1:after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: var(--hdu-orange);
+            border-radius: 2px;
+        }
+
+        /* 地图容器优化 */
         #map {
-            height: 600px;
+            height: 70vh;
             margin: 20px 0;
-            border-radius: 10px;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            overflow: hidden;
         }
+
+        #map:hover {
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        /* 表单容器优化 */
         .form-container {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
         }
-        .amap-icon img {
-            border-radius: 50%;
+
+        .form-container h4 {
+            color: var(--hdu-blue);
+            margin-bottom: 20px;
+            font-weight: 600;
         }
-        /* 小人样式 */
+
+        /* 按钮样式优化 */
+        .btn {
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background-color: var(--hdu-blue);
+            border-color: var(--hdu-blue);
+        }
+
+        .btn-primary:hover {
+            background-color: #004494;
+            border-color: #004494;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-success {
+            background-color: var(--hdu-green);
+            border-color: var(--hdu-green);
+        }
+
+        .btn-info {
+            background-color: #17a2b8;
+            border-color: #17a2b8;
+        }
+
+        /* 输入框样式优化 */
+        .form-control {
+            border-radius: 8px;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--hdu-blue);
+            box-shadow: 0 0 0 0.25rem rgba(0, 86, 179, 0.25);
+        }
+
+        /* 小人样式优化 */
         .character {
-            width: 30px;
-            height: 30px;
-            background-color: #ff5722;
+            width: 32px;
+            height: 32px;
+            background-color: var(--hdu-orange);
             border-radius: 50%;
             position: relative;
             z-index: 1000;
             transition: transform 0.3s ease;
-            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            border: 2px solid white;
         }
+
         .character:after {
             content: "";
             position: absolute;
-            width: 10px;
-            height: 10px;
-            background-color: #fff;
+            width: 12px;
+            height: 12px;
+            background-color: white;
             border-radius: 50%;
             top: 8px;
-            left: 6px;
+            left: 8px;
         }
-        /* 进入按钮样式 */
+
+        /* 进入按钮优化 */
         .enter-btn {
             position: absolute;
-            bottom: -40px;
+            bottom: -45px;
             left: 50%;
             transform: translateX(-50%);
-            background-color: #4CAF50;
+            background-color: var(--hdu-blue);
             color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
+            padding: 10px 20px;
+            border-radius: 25px;
             cursor: pointer;
             display: none;
             z-index: 1001;
-            font-weight: bold;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            font-weight: 600;
+            box-shadow: 0 6px 15px rgba(0, 86, 179, 0.3);
             border: none;
             transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
         }
+
         .enter-btn:hover {
-            background-color: #45a049;
+            background-color: #004494;
             transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 8px 20px rgba(0, 86, 179, 0.4);
         }
-        /* 地点信息弹窗 - 优化后的样式 */
+
+        /* 地点信息弹窗优化 */
         .location-info {
             position: fixed;
             top: 50%;
@@ -72,21 +182,18 @@
             transform: translate(-50%, -50%);
             background-color: white;
             padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border-radius: 16px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
             z-index: 1002;
-            max-width: 600px;
+            max-width: 650px;
             width: 90%;
             display: none;
-            border: 1px solid #e0e0e0;
-            animation: fadeIn 0.3s ease-out;
+            border: none;
+            animation: fadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
             max-height: 80vh;
             overflow-y: auto;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translate(-50%, -40%); }
-            to { opacity: 1; transform: translate(-50%, -50%); }
-        }
+
         .location-info-header {
             display: flex;
             justify-content: space-between;
@@ -95,109 +202,174 @@
             padding-bottom: 15px;
             border-bottom: 2px solid #f0f0f0;
         }
+
         .location-info-title {
-            color: #2c3e50;
-            font-size: 24px;
-            font-weight: bold;
+            color: var(--hdu-blue);
+            font-size: 1.8rem;
+            font-weight: 700;
             margin: 0;
         }
+
         .close-btn {
-            color: #7f8c8d;
-            font-size: 24px;
-            cursor: pointer;
-            transition: color 0.3s;
-        }
-        .close-btn:hover {
-            color: #e74c3c;
-        }
-        .location-info-content {
-            color: #34495e;
-            line-height: 1.6;
-            font-size: 16px;
-            white-space: pre-wrap;
-        }
-        .location-info-footer {
-            margin-top: 20px;
-            text-align: right;
-            font-size: 14px;
             color: #95a5a6;
-        }
-        /* 遮罩层 */
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0,0,0,0.5);
-            z-index: 1001;
-            display: none;
-        }
-        /* 响应式调整 */
-        @media (max-width: 768px) {
-            .location-info {
-                padding: 20px;
-                max-width: 90%;
-            }
-            .location-info-title {
-                font-size: 20px;
-            }
-        }
-        /* 新增事件提示样式 */
-        .event-notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            border-left: 5px solid #4CAF50;
-            display: none;
-            z-index: 1003;
-            max-width: 300px;
-            animation: slideIn 0.3s ease-out;
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            line-height: 1;
         }
 
-        @keyframes slideIn {
-            from { transform: translateX(100%); }
-            to { transform: translateX(0); }
+        .close-btn:hover {
+            color: var(--hdu-orange);
+            transform: rotate(90deg);
+        }
+
+        .location-info-content {
+            color: #555;
+            line-height: 1.8;
+            font-size: 1rem;
+            white-space: pre-wrap;
+        }
+
+        .location-info-footer {
+            margin-top: 25px;
+            text-align: right;
+            font-size: 0.9rem;
+            color: #95a5a6;
+            font-style: italic;
+        }
+
+        /* 事件通知优化 */
+        .event-notification {
+            position: fixed;
+            top: 25px;
+            right: 25px;
+            background: white;
+            padding: 18px 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-left: 5px solid var(--hdu-green);
+            display: none;
+            z-index: 1003;
+            max-width: 320px;
+            animation: slideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         .event-title {
-            color: #2c3e50;
-            font-weight: bold;
+            color: var(--hdu-dark);
+            font-weight: 700;
             margin-bottom: 8px;
+            font-size: 1.1rem;
         }
 
         .event-content {
-            color: #34495e;
-            font-size: 14px;
+            color: #555;
+            font-size: 0.95rem;
         }
 
         .event-close {
             position: absolute;
-            top: 5px;
-            right: 10px;
+            top: 8px;
+            right: 12px;
             cursor: pointer;
-            color: #7f8c8d;
+            color: #95a5a6;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
         }
 
-        /* 状态栏样式 */
+        .event-close:hover {
+            color: var(--hdu-orange);
+            transform: scale(1.2);
+        }
+
+        /* 状态栏优化 */
         .status-bar {
             position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            top: 25px;
+            left: 25px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
             z-index: 1000;
+            min-width: 180px;
         }
 
         .status-item {
-            margin: 5px 0;
-            font-size: 14px;
+            margin: 8px 0;
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .status-item span {
+            font-weight: 600;
+            color: var(--hdu-blue);
+        }
+
+        /* 弹窗动画优化 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -40%) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            #map {
+                height: 60vh;
+            }
+
+            .status-bar {
+                top: 15px;
+                left: 15px;
+                padding: 12px 15px;
+                min-width: 160px;
+            }
+
+            .event-notification {
+                top: 15px;
+                right: 15px;
+                max-width: 280px;
+            }
+
+            .location-info {
+                padding: 20px;
+            }
+
+            .location-info-title {
+                font-size: 1.4rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .form-container {
+                padding: 20px 15px;
+            }
+
+            .btn {
+                margin-bottom: 10px;
+                width: 100%;
+            }
         }
     </style>
 </head>
