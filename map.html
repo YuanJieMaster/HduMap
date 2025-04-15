@@ -372,6 +372,42 @@
             }
         }
     </style>
+    <style>
+        /* 确认对话框样式 */
+        .confirm-dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            z-index: 1004;
+            display: none;
+            max-width: 300px;
+        }
+        .confirm-buttons {
+            margin-top: 15px;
+            text-align: right;
+        }
+        .confirm-btn {
+            margin-left: 10px;
+            padding: 6px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .confirm-ok {
+            background: #4CAF50;
+            color: white;
+            border: none;
+        }
+        .confirm-cancel {
+            background: #f44336;
+            color: white;
+            border: none;
+        }
+    </style>
 </head>
 <body>
 <div class="container">
@@ -441,6 +477,13 @@
             </div>
         </form>
     </div>
+    <div id="confirmDialog" class="confirm-dialog">
+        <div id="confirmMessage"></div>
+        <div class="confirm-buttons">
+            <button class="confirm-btn confirm-cancel" onclick="handleConfirm(false)">取消</button>
+            <button class="confirm-btn confirm-ok" onclick="handleConfirm(true)">确定</button>
+        </div>
+    </div>
 </div>
 
 <!-- 高德地图API -->
@@ -455,6 +498,7 @@
     let score = 0;
     let exp = 0;
     let eventCooldown = false;
+    let pendingEvent = null;
 
     // 全局变量
     let characterPosition = null;
@@ -484,7 +528,8 @@
                 {
                     type: "study",
                     probability: 0.3,
-                    message: "你认真学习了2小时，获得了10学分！",
+                    message: "要开始学习吗？预计消耗20体力，获得10学分",
+                    requireConfirmation: true, // 新增确认要求
                     effect: { score: 10, stamina: -20 }
                 }
             ]
@@ -522,7 +567,8 @@
             events: [{
                 type: "restore",
                 probability: 1,
-                message: "享用美食后体力完全恢复！",
+                message: "要吃饭吗？预计恢复70体力",
+                requireConfirmation: true, // 新增确认要求
                 effect: { stamina: 70 }
             }]
         }
@@ -712,6 +758,33 @@
 
     // 事件处理函数
     function triggerEvent(event) {
+        if (event.requireConfirmation) {
+            showConfirmationDialog(event);
+        } else {
+            applyEventEffect(event);
+        }
+    }
+
+    // 新增确认对话框函数
+    function showConfirmationDialog(event) {
+        document.getElementById('confirmMessage').textContent = event.message;
+        document.getElementById('confirmDialog').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+        pendingEvent = event;
+    }
+
+    function handleConfirm(confirmed) {
+        document.getElementById('confirmDialog').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+
+        if (confirmed && pendingEvent) {
+            applyEventEffect(pendingEvent);
+        }
+        pendingEvent = null;
+    }
+
+    // 拆分效果应用函数
+    function applyEventEffect(event) {
         showEventNotification(event.message);
         applyEffect(event.effect);
 
@@ -722,6 +795,19 @@
             }, event.duration);
         }
     }
+
+    // 修改食堂事件示例
+    presetLocations.push({
+        name: "食堂",
+        coords: [30.316543, 120.345892],
+        description: "学生食堂，提供各种美食",
+        events: [{
+            type: "restore",
+            message: "要花费10分钟用餐吗？（恢复全部体力）",
+            requireConfirmation: true,
+            effect: { stamina: 100 }
+        }]
+    });
 
     function triggerRandomEvent() {
         eventCooldown = true;
@@ -762,18 +848,6 @@
     function closeEvent() {
         document.getElementById('eventNotification').style.display = 'none';
     }
-
-    // 食堂地点添加恢复功能
-    presetLocations.push({
-        name: "食堂",
-        coords: [30.316543, 120.345892],
-        description: "学生食堂，提供各种美食",
-        events: [{
-            type: "restore",
-            message: "享用美食后体力完全恢复！",
-            effect: { stamina: 100 }
-        }]
-    });
 
     // 计算两点之间的距离
     function getDistance(pos1, pos2) {
