@@ -143,6 +143,62 @@
                 font-size: 20px;
             }
         }
+        /* 新增事件提示样式 */
+        .event-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border-left: 5px solid #4CAF50;
+            display: none;
+            z-index: 1003;
+            max-width: 300px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        .event-title {
+            color: #2c3e50;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .event-content {
+            color: #34495e;
+            font-size: 14px;
+        }
+
+        .event-close {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            cursor: pointer;
+            color: #7f8c8d;
+        }
+
+        /* 状态栏样式 */
+        .status-bar {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .status-item {
+            margin: 5px 0;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -158,6 +214,18 @@
 
     <!-- 遮罩层 -->
     <div id="overlay" class="overlay"></div>
+
+    <div class="status-bar">
+        <div class="status-item">体力: <span id="stamina">100</span></div>
+        <div class="status-item">学分: <span id="score">0</span></div>
+        <div class="status-item">经验: <span id="exp">0</span></div>
+    </div>
+
+    <div id="eventNotification" class="event-notification">
+        <span class="event-close" onclick="closeEvent()">×</span>
+        <div class="event-title" id="eventTitle"></div>
+        <div class="event-content" id="eventContent"></div>
+    </div>
 
     <!-- 地点信息弹窗 -->
     <div id="locationInfo" class="location-info">
@@ -211,6 +279,10 @@
 <script>
     // 杭电中心坐标（高德坐标系）
     const campusCenter = [30.314812, 120.343287];
+    let stamina = 100;
+    let score = 0;
+    let exp = 0;
+    let eventCooldown = false;
 
     // 全局变量
     let characterPosition = null;
@@ -235,7 +307,15 @@
         {
             name: "图书馆",
             coords: [30.315108, 120.343309],
-            description: "杭州电子科技大学图书馆，是浙江省杭州电子科技大学的直属服务单位。杭州电子科技大学下沙校区图书馆总建筑面积2.8万平方米，于2003年落成启用。截至2022年12月，图书馆拥有藏书504.13万册，其中纸质图书230.82万册，电子图书273.31万册，长期订阅的中外文报刊977种，引进了几十种中外文数字资源。"
+            description: "杭州电子科技大学图书馆，是浙江省杭州电子科技大学的直属服务单位。杭州电子科技大学下沙校区图书馆总建筑面积2.8万平方米，于2003年落成启用。截至2022年12月，图书馆拥有藏书504.13万册，其中纸质图书230.82万册，电子图书273.31万册，长期订阅的中外文报刊977种，引进了几十种中外文数字资源。",
+            events: [
+                {
+                    type: "study",
+                    probability: 0.3,
+                    message: "你认真学习了2小时，获得了10学分！",
+                    effect: { score: 10, stamina: -20 }
+                }
+            ]
         },
         {
             name: "软件学院",
@@ -262,6 +342,34 @@
             name: "体育馆",
             coords: [30.314921, 120.340039],
             description: "这个外形有点像UFO的，是杭州第二大的体育馆，位于杭电西侧，会作为今年的亚运会比赛场馆之一。很多大型活动在这里展开：开学典礼、毕业典礼、篮球比赛等等。体育馆旁边有一个副馆，内设有舞蹈室、羽毛球场。"
+        },
+        {
+            name: "一餐",
+            coords: [30.316312, 120.341447],
+            description: "一个餐厅。",
+            events: [{
+                type: "restore",
+                probability: 1,
+                message: "享用美食后体力完全恢复！",
+                effect: { stamina: 70 }
+            }]
+        }
+    ];
+
+    // 随机事件列表
+    const randomEvents = [
+        {
+            type: "weather",
+            name: "突然下雨",
+            message: "突然下起了大雨！体力消耗加快",
+            effect: { staminaRate: 2 },
+            duration: 10000 // 10秒
+        },
+        {
+            type: "find",
+            name: "捡到校园卡",
+            message: "你捡到了一张校园卡，交给失主后获得感谢",
+            effect: { exp: 5 }
         }
     ];
 
@@ -273,12 +381,12 @@
         }).addTo(map);
 
         marker.bindPopup(`
-                <div class="popup-content">
-                    <h5 class="text-primary">${location.name}</h5>
-                    <p style="white-space: pre-wrap">${location.description}</p>
-                    <small class="text-muted">坐标：${location.coords[0].toFixed(6)}, ${location.coords[1].toFixed(6)}</small>
-                </div>
-            `);
+            <div class="popup-content">
+                <h5 class="text-primary">${location.name}</h5>
+                <p style="white-space: pre-wrap">${location.description}</p>
+                <small class="text-muted">坐标：${location.coords[0].toFixed(6)}, ${location.coords[1].toFixed(6)}</small>
+            </div>
+        `);
     }
 
     // 初始化预设地点
@@ -315,6 +423,10 @@
 
     // 初始化小人
     function initCharacter() {
+        stamina = 100;
+        score = 0;
+        exp = 0;
+        updateStatus();
         if (characterMarker) {
             map.removeLayer(characterMarker);
         }
@@ -343,6 +455,7 @@
     // 键盘控制小人移动
     function handleKeyDown(e) {
         if (!characterMarker) return;
+        if (stamina <= 0) return; // 体力耗尽时不允许移动
 
         const moveStep = 0.0001; // 移动步长
         let newLat = characterPosition[0];
@@ -377,6 +490,17 @@
             animate: true,
             duration: 0.2
         });
+
+        // 每次移动消耗体力
+        stamina = Math.max(stamina - 1, 0);
+        updateStatus();
+
+        // 体力耗尽处理
+        if (stamina === 0) {
+            showEventNotification("体力耗尽！请到食堂恢复体力", "警告");
+            // 禁止移动
+            return;
+        }
     }
 
     // 检测小人是否接近地点
@@ -394,14 +518,90 @@
                 enterBtn.style.display = 'block';
                 enterBtn.textContent = `进入${location.name}`;
 
-                // 将按钮定位到小人附近
-                const pixelPos = map.latLngToContainerPoint(characterPosition);
-                enterBtn.style.left = `${pixelPos.x}px`;
-                enterBtn.style.top = `${pixelPos.y + 20}px`;
+                // 检查并触发地点事件
+                if (location.events) {
+                    location.events.forEach(event => {
+                        if (Math.random() < event.probability) {
+                            triggerEvent(event);
+                        }
+                    });
+                }
+
+                // 按钮定位...
                 break;
             }
         }
+
+        // 随机触发事件（10%概率）
+        if (Math.random() < 0.1 && !eventCooldown) {
+            triggerRandomEvent();
+        }
     }
+
+    // 事件处理函数
+    function triggerEvent(event) {
+        showEventNotification(event.message);
+        applyEffect(event.effect);
+
+        if (event.duration) {
+            setTimeout(() => {
+                revertEffect(event.effect);
+                showEventNotification("天气恢复了正常");
+            }, event.duration);
+        }
+    }
+
+    function triggerRandomEvent() {
+        eventCooldown = true;
+        const event = randomEvents[Math.floor(Math.random() * randomEvents.length)];
+        triggerEvent(event);
+        setTimeout(() => eventCooldown = false, 30000); // 30秒冷却
+    }
+
+    function applyEffect(effect) {
+        if (effect.score) score += effect.score;
+        if (effect.exp) exp += effect.exp;
+        if (effect.stamina) stamina += effect.stamina;
+        if (effect.staminaRate) staminaRate = effect.staminaRate;
+
+        stamina = Math.min(Math.max(stamina, 0), 100);
+        updateStatus();
+    }
+
+    function revertEffect(effect) {
+        if (effect.staminaRate) staminaRate = 1;
+    }
+
+    function updateStatus() {
+        document.getElementById('stamina').textContent = stamina;
+        document.getElementById('score').textContent = score;
+        document.getElementById('exp').textContent = exp;
+    }
+
+    // 新增事件通知函数
+    function showEventNotification(message, title = "事件触发") {
+        const notification = document.getElementById('eventNotification');
+        document.getElementById('eventTitle').textContent = title;
+        document.getElementById('eventContent').textContent = message;
+        notification.style.display = 'block';
+        setTimeout(() => notification.style.display = 'none', 5000);
+    }
+
+    function closeEvent() {
+        document.getElementById('eventNotification').style.display = 'none';
+    }
+
+    // 食堂地点添加恢复功能
+    presetLocations.push({
+        name: "食堂",
+        coords: [30.316543, 120.345892],
+        description: "学生食堂，提供各种美食",
+        events: [{
+            type: "restore",
+            message: "享用美食后体力完全恢复！",
+            effect: { stamina: 100 }
+        }]
+    });
 
     // 计算两点之间的距离
     function getDistance(pos1, pos2) {
