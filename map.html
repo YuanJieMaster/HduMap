@@ -411,7 +411,10 @@
 </head>
 <body>
 <div class="container">
-    <h1 class="text-center my-4">杭州电子科技大学校园地图</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-center my-4">杭州电子科技大学校园地图</h1>
+        <button class="btn btn-secondary" onclick="goBack()">返回主界面</button>
+    </div>
 
     <!-- 地图容器 -->
     <div id="map"></div>
@@ -492,11 +495,25 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // 杭电中心坐标（高德坐标系）
+    // 获取当前实例ID
+    const currentInstanceId = localStorage.getItem('currentInstanceId');
+    if (!currentInstanceId) {
+        window.location.href = 'index.html';
+    }
+
+    // 获取实例数据
+    const instances = JSON.parse(localStorage.getItem('hduMapInstances') || '[]');
+    const currentInstance = instances.find(instance => instance.id === parseInt(currentInstanceId));
+
+    if (!currentInstance) {
+        window.location.href = 'index.html';
+    }
+
+    // 初始化游戏数据
     const campusCenter = [30.314812, 120.343287];
-    let stamina = 100;
-    let score = 0;
-    let exp = 0;
+    let stamina = currentInstance.data.stamina;
+    let score = currentInstance.data.score;
+    let exp = currentInstance.data.exp;
     let eventCooldown = false;
     let pendingEvent = null;
 
@@ -834,6 +851,10 @@
         document.getElementById('stamina').textContent = stamina;
         document.getElementById('score').textContent = score;
         document.getElementById('exp').textContent = exp;
+
+        // 保存当前状态
+        currentInstance.data = { stamina, score, exp };
+        saveInstances(instances);
     }
 
     // 新增事件通知函数
@@ -891,6 +912,16 @@
 
     // 点击遮罩层也可以关闭弹窗
     document.getElementById('overlay').addEventListener('click', closeLocationInfo);
+
+    // 返回主界面
+    function goBack() {
+        window.location.href = 'index.html';
+    }
+
+    // 保存实例数据
+    function saveInstances(instances) {
+        localStorage.setItem('hduMapInstances', JSON.stringify(instances));
+    }
 </script>
 </body>
 </html>
