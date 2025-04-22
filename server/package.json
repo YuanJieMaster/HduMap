@@ -1,0 +1,25 @@
+{
+  "name": "hdu-map-server",
+  "version": "1.0.0",
+  "description": "杭电校园地图多人模式服务端",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": [
+    "杭电",
+    "地图",
+    "多人游戏"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

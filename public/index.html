@@ -22,57 +22,69 @@
     </div>
 
     <script>
-        // 从本地存储获取实例列表
-        function getInstances() {
-            return JSON.parse(localStorage.getItem('hduMapInstances') || '[]');
-        }
+        // 使用fetch API与服务器通信
+        const API_BASE = 'http://localhost:3000/api';
 
-        // 保存实例列表到本地存储
-        function saveInstances(instances) {
-            localStorage.setItem('hduMapInstances', JSON.stringify(instances));
+        // 获取实例列表
+        async function getInstances() {
+            try {
+                const response = await fetch(`${API_BASE}/instances`);
+                return await response.json();
+            } catch (error) {
+                console.error('获取实例失败:', error);
+                return [];
+            }
         }
 
         // 创建新实例
-        function createNewInstance() {
-            const instances = getInstances();
-            const newInstance = {
-                id: Date.now(),
-                name: `副本 ${instances.length + 1}`,
-                created: new Date().toLocaleString(),
-                data: {
-                    stamina: 100,
-                    score: 0,
-                    exp: 0
-                }
-            };
+        async function createNewInstance() {
+            try {
+                const response = await fetch(`${API_BASE}/instances`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        data: {
+                            stamina: 100,
+                            score: 0,
+                            exp: 0
+                        }
+                    })
+                });
 
-            instances.push(newInstance);
-            saveInstances(instances);
-            loadInstance(newInstance.id);
+                const newInstance = await response.json();
+                loadInstance(newInstance.id);
+            } catch (error) {
+                console.error('创建实例失败:', error);
+            }
         }
-
         // 加载实例
         function loadInstance(instanceId) {
-            localStorage.setItem('currentInstanceId', instanceId);
-            window.location.href = 'map.html';
+            sessionStorage.setItem('currentInstanceId', instanceId);
+            window.location.href = `map.html?instance=${instanceId}`;
         }
-
-        // 渲染实例列表
-        function renderInstances() {
-            const instances = getInstances();
+        // 渲染实例列表（改为异步）
+        async function renderInstances() {
             const instanceList = document.getElementById('instanceList');
+            instanceList.innerHTML = '<div class="loading">加载中...</div>';
 
-            if (instances.length === 0) {
-                instanceList.innerHTML = '<div class="empty-state">暂无副本，点击下方按钮创建</div>';
-                return;
+            try {
+                const instances = await getInstances();
+
+                if (instances.length === 0) {
+                    instanceList.innerHTML = '<div class="empty-state">暂无副本，点击下方按钮创建</div>';
+                    return;
+                }
+                instanceList.innerHTML = instances.map(instance => `
+      <div class="instance-item" onclick="loadInstance(${instance.id})">
+        <div class="instance-name">${instance.name}</div>
+        <div class="instance-date">创建时间：${instance.created}</div>
+      </div>
+    `).join('');
+            } catch (error) {
+                instanceList.innerHTML = '<div class="error-state">加载失败，请刷新重试</div>';
             }
-
-            instanceList.innerHTML = instances.map(instance => `
-                <div class="instance-item" onclick="loadInstance(${instance.id})">
-                    <div class="instance-name">${instance.name}</div>
-                    <div class="instance-date">创建时间：${instance.created}</div>
-                </div>
-            `).join('');
         }
 
         // 页面加载时渲染实例列表
