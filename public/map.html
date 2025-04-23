@@ -71,6 +71,18 @@
         <div class="status-item">经验: <span id="exp">0</span></div>
     </div>
 
+<!--    <div class="status-bar1">-->
+<!--        <div class="status-item">体力: <span id="stamina1">100</span></div>-->
+<!--        <div class="status-item">学分: <span id="score1">0</span></div>-->
+<!--        <div class="status-item">经验: <span id="exp1">0</span></div>-->
+<!--    </div>-->
+
+<!--    <div class="status-bar2">-->
+<!--        <div class="status-item">体力: <span id="stamina2">100</span></div>-->
+<!--        <div class="status-item">学分: <span id="score2">0</span></div>-->
+<!--        <div class="status-item">经验: <span id="exp2">0</span></div>-->
+<!--    </div>-->
+
     <div id="eventNotification" class="event-notification">
         <span class="event-close" onclick="closeEvent()">×</span>
         <div class="event-title" id="eventTitle"></div>
@@ -386,15 +398,13 @@
     function updateStatus() {
         // 显示两个小人的平均状态（可根据需求修改）
         let totalStamina = 0, totalScore = 0, totalExp = 0;
-        Object.values(characters).forEach(character => {
-            totalStamina += character.stamina;
-            totalScore += character.score;
-            totalExp += character.exp;
-        });
+        document.getElementById('stamina1').textContent = characters.red.stamina;
+        document.getElementById('score1').textContent = characters.red.score;
+        document.getElementById('exp1').textContent = characters.red.exp;
+        document.getElementById('stamina2').textContent = characters.blue.stamina;
+        document.getElementById('score2').textContent = characters.blue.score;
+        document.getElementById('exp2').textContent = characters.blue.exp;
 
-        document.getElementById('stamina').textContent = Math.round(totalStamina/2);
-        document.getElementById('score').textContent = Math.round(totalScore/2);
-        document.getElementById('exp').textContent = Math.round(totalExp/2);
         // 保存状态
         currentInstance.data = {
             stamina: totalStamina,
@@ -417,7 +427,7 @@
                 if (location.events) {
                     location.events.forEach(event => {
                         if (Math.random() < event.probability) {
-                            triggerEvent(event);
+                            triggerEvent(character, event);
                         }
                     });
                 }
@@ -433,16 +443,16 @@
     }
 
     // 事件处理函数
-    function triggerEvent(event) {
+    function triggerEvent(character, event) {
         if (event.requireConfirmation) {
-            showConfirmationDialog(event);
+            showConfirmationDialog(character, event);
         } else {
-            applyEventEffect(event);
+            applyEventEffect(character, event);
         }
     }
 
     // 新增确认对话框函数
-    function showConfirmationDialog(event) {
+    function showConfirmationDialog(character, event) {
         document.getElementById('confirmMessage').textContent = event.message;
         document.getElementById('confirmDialog').style.display = 'block';
         document.getElementById('overlay').style.display = 'block';
@@ -460,9 +470,9 @@
     }
 
     // 拆分效果应用函数
-    function applyEventEffect(event) {
+    function applyEventEffect(character, event) {
         showEventNotification(event.message);
-        applyEffect(event.effect);
+        applyEffect(character, event.effect);
 
         if (event.duration) {
             setTimeout(() => {
@@ -492,13 +502,13 @@
         setTimeout(() => eventCooldown = false, 30000); // 30秒冷却
     }
 
-    function applyEffect(effect) {
-        if (effect.score) score += effect.score;
-        if (effect.exp) exp += effect.exp;
-        if (effect.stamina) stamina += effect.stamina;
-        if (effect.staminaRate) staminaRate = effect.staminaRate;
+    function applyEffect(character, effect) {
+        if (effect.score) character.score += effect.score;
+        if (effect.exp) character.exp += effect.exp;
+        if (effect.stamina) characters.stamina += effect.stamina;
+        if (effect.staminaRate) character.staminaRate = effect.staminaRate;
 
-        stamina = Math.min(Math.max(stamina, 0), 100);
+        character.stamina = Math.min(Math.max(stamina, 0), 100);
         updateStatus();
     }
 
